@@ -1,9 +1,12 @@
 from fastapi import FastAPI, HTTPException
 from app.schemas import GenerateRequest, GenerateResponse, ExtractRequest, ExtractResponse
+from app.api.routes.documents import router as documents_router
 from app.services.llm import llm_service
 import logging
 
 app = FastAPI()
+
+app.include_router(documents_router)
 
 @app.get("/health")
 async def health():
