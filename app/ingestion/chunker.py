@@ -50,3 +50,63 @@ def chunk_text_by_tokens(
             break
 
     return chunks
+
+
+def chunk_pages(
+    pages: list[dict],
+    chunk_size: int = 500,
+    overlap: int = 50,
+) -> list[dict]:
+    
+    if chunk_size <= 0:
+        raise ValueError("chunk_size must be greater than 0")
+
+    if overlap < 0:
+        raise ValueError("overlap cannot be negative")
+
+    if overlap >= chunk_size:
+        raise ValueError("overlap must be smaller than chunk_size")
+
+    all_chunks = []
+
+    # Process each PDF page independently.
+    for page in pages:
+        page_number = page["page_number"]
+        text = page["text"]
+
+        # Convert this page's text into token IDs.
+        token_ids = tokenizer.encode(
+            text,
+            add_special_tokens=False,
+            truncation=False,
+        )
+
+        step = chunk_size - overlap
+
+        # Create overlapping chunks from this page.
+        for start in range(0, len(token_ids), step):
+            end = start + chunk_size
+
+            chunk_token_ids = token_ids[start:end]
+
+            if not chunk_token_ids:
+                break
+
+            chunk_text = tokenizer.decode(
+                chunk_token_ids,
+                skip_special_tokens=True,
+            ).strip()
+
+            if chunk_text:
+                all_chunks.append(
+                    {
+                        "page_number": page_number,
+                        "chunk_index": len(all_chunks),
+                        "text": chunk_text,
+                    }
+                )
+
+            if end >= len(token_ids):
+                break
+
+    return all_chunks
