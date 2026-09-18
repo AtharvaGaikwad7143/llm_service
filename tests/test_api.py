@@ -1,3 +1,4 @@
+
 from fastapi.testclient import TestClient
 
 from app.main import app
@@ -25,6 +26,16 @@ def test_generate_validation():
 def test_extract_validation():
     response = client.post(
         "/extract",
+        json={}
+    )
+
+    assert response.status_code == 422
+
+
+def test_query_validation():
+    # The question field is required.
+    response = client.post(
+        "/query",
         json={}
     )
 
