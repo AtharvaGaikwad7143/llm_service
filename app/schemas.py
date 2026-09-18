@@ -56,3 +56,20 @@ class SearchResult(BaseModel):
 class SearchResponse(BaseModel):
     query: str
     results: list[SearchResult]
+
+
+class QueryRequest(BaseModel):
+    question: str = Field(
+        min_length=1,
+        description="Question to ask about the uploaded documents."
+    )
+
+
+class Source(BaseModel):
+    document_id: int
+    metadata: dict
+
+
+class QueryResponse(BaseModel):
+    answer: str
+    sources: list[Source]

@@ -1,0 +1,82 @@
+[
+  {
+    "question": "What is Redis commonly used for?",
+    "expected_document_id": 1
+  },
+  {
+    "question": "What type of data store is Redis?",
+    "expected_document_id": 1
+  },
+  {
+    "question": "What operations is Redis known for?",
+    "expected_document_id": 1
+  },
+  {
+    "question": "What is PostgreSQL?",
+    "expected_document_id": 2
+  },
+  {
+    "question": "How does PostgreSQL store structured data?",
+    "expected_document_id": 2
+  },
+  {
+    "question": "What language is commonly used with PostgreSQL?",
+    "expected_document_id": 2
+  },
+  {
+    "question": "What is Python?",
+    "expected_document_id": 3
+  },
+  {
+    "question": "What is Python commonly used for?",
+    "expected_document_id": 3
+  },
+  {
+    "question": "Is Python useful for backend development?",
+    "expected_document_id": 3
+  },
+  {
+    "question": "What does Docker package?",
+    "expected_document_id": 4
+  },
+  {
+    "question": "Why are Docker containers useful across environments?",
+    "expected_document_id": 4
+  },
+  {
+    "question": "What does Docker do with application dependencies?",
+    "expected_document_id": 4
+  },
+  {
+    "question": "What is the capital city of France?",
+    "expected_document_id": 5
+  },
+  {
+    "question": "What famous landmark is Paris known for?",
+    "expected_document_id": 5
+  },
+  {
+    "question": "Which country is Paris the capital of?",
+    "expected_document_id": 5
+  },
+  {
+    "question": "What is the Eiffel Tower associated with?",
+    "expected_document_id": 5
+  },
+  {
+    "question": "What is an in-memory data store?",
+    "expected_document_id": 1
+  },
+  {
+    "question": "What technology packages applications into containers?",
+    "expected_document_id": 4
+  },
+  {
+    "question": "Which programming language is used for backend development and data science?",
+    "expected_document_id": 3
+  },
+  {
+    "question": "Which database system uses tables and SQL to store structured data?",
+    "expected_document_id": 2
+  }
+]
