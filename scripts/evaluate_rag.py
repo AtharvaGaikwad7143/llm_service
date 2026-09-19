@@ -1,15 +1,15 @@
-import json
-import asyncio
 
-from app.services.embeddings import embed_text
-from app.repositories.vector_repository import search_similar_chunks
+import asyncio
+import json
+
+from app.services.rag_service import hybrid_search
 
 
 QUESTIONS_FILE = "scripts/rag_eval_questions.json"
 
 
 async def evaluate_rag():
-    # Load our 20 evaluation questions.
+    # Load the evaluation dataset.
     with open(QUESTIONS_FILE, "r", encoding="utf-8") as file:
         questions = json.load(file)
 
@@ -19,24 +19,20 @@ async def evaluate_rag():
         question = item["question"]
         expected_document_id = item["expected_document_id"]
 
-        # Convert the question into an embedding.
-        query_embedding = embed_text(question)
-
-        # Retrieve the top 5 most similar chunks from pgvector.
-        results = await search_similar_chunks(
-            query_embedding=query_embedding,
+        # Run hybrid retrieval.
+        results = await hybrid_search(
+            query=question,
             limit=5,
         )
 
-        # Extract document IDs returned by retrieval.
         retrieved_document_ids = [
             result["document_id"]
             for result in results
         ]
 
-        # Recall@5:
-        # Did the expected document appear anywhere in the top 5?
-        is_correct = expected_document_id in retrieved_document_ids
+        is_correct = (
+            expected_document_id in retrieved_document_ids
+        )
 
         if is_correct:
             correct += 1
@@ -60,3 +56,4 @@ async def evaluate_rag():
 
 if __name__ == "__main__":
     asyncio.run(evaluate_rag())
+

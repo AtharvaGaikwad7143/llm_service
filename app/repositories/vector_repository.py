@@ -107,3 +107,55 @@ async def search_similar_chunks(
         rows = result.mappings().all()
 
         return [dict(row) for row in rows]
+
+
+async def search_keyword_chunks(
+    query: str,
+    limit: int = 5,
+) -> list[dict]:
+    """
+    Find chunks using PostgreSQL full-text keyword search.
+
+    PostgreSQL converts both the stored chunk text and the query
+    into searchable linguistic representations.
+    """
+
+    async with AsyncSessionLocal() as session:
+
+        query_text = text(
+            """
+            SELECT
+                id,
+                document_id,
+                chunk_text,
+                metadata,
+
+                -- ts_rank measures how relevant the chunk is
+                -- to the provided keyword query.
+                ts_rank(
+                    search_vector,
+                    websearch_to_tsquery('english', :query)
+                ) AS keyword_score
+
+            FROM document_chunks
+
+            WHERE search_vector @@
+                websearch_to_tsquery('english', :query)
+
+            ORDER BY keyword_score DESC
+
+            LIMIT :limit
+            """
+        )
+
+        result = await session.execute(
+            query_text,
+            {
+                "query": query,
+                "limit": limit,
+            },
+        )
+
+        rows = result.mappings().all()
+
+        return [dict(row) for row in rows]
