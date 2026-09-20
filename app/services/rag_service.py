@@ -1,20 +1,15 @@
 import asyncio
+
 from app.repositories.vector_repository import (
     search_keyword_chunks,
     search_similar_chunks,
 )
 from app.services.embeddings import embed_text
 from app.services.llm import llm_service
+from app.services.reranker import rerank_documents
 
 
 def normalize_scores(scores: dict[int, float]) -> dict[int, float]:
-    """
-    Normalize scores to the range [0, 1] using min-max normalization.
-
-    This allows vector and keyword scores, which have different
-    score distributions, to be combined more meaningfully.
-    """
-
     if not scores:
         return {}
 
@@ -23,8 +18,6 @@ def normalize_scores(scores: dict[int, float]) -> dict[int, float]:
     minimum = min(values)
     maximum = max(values)
 
-    # If every score is identical, there is no useful difference
-    # between the results.
     if maximum == minimum:
         return {
             chunk_id: 1.0
@@ -39,21 +32,12 @@ def normalize_scores(scores: dict[int, float]) -> dict[int, float]:
 
 async def hybrid_search(
     query: str,
-    limit: int = 5,
+    limit: int = 20,
 ) -> list[dict]:
-    """
-    Retrieve documents using both:
 
-    1. Semantic vector search
-    2. PostgreSQL keyword search
-
-    Then combine both signals into a hybrid ranking.
-    """
-
-    # One embedding is enough for the vector search.
     query_embedding = embed_text(query)
 
-    # Run both retrieval systems concurrently.
+    # Run vector and keyword retrieval concurrently.
     vector_results, keyword_results = await asyncio.gather(
         search_similar_chunks(
             query_embedding=query_embedding,
@@ -65,30 +49,25 @@ async def hybrid_search(
         ),
     )
 
-    # Convert cosine distance into similarity.
-    #
-    # pgvector:
-    # lower distance = better
-    #
-    # Therefore:
-    # similarity = 1 - distance
     vector_scores = {
         result["id"]: 1.0 - float(result["distance"])
         for result in vector_results
     }
 
-    # PostgreSQL:
-    # higher ts_rank = better
     keyword_scores = {
         result["id"]: float(result["keyword_score"])
         for result in keyword_results
     }
 
-    # Normalize both scoring systems independently.
-    normalized_vector_scores = normalize_scores(vector_scores)
-    normalized_keyword_scores = normalize_scores(keyword_scores)
+    normalized_vector_scores = normalize_scores(
+        vector_scores
+    )
 
-    # Keep every chunk returned by either retrieval method.
+    normalized_keyword_scores = normalize_scores(
+        keyword_scores
+    )
+
+    # Merge candidates from both retrieval systems.
     all_results = {}
 
     for result in vector_results + keyword_results:
@@ -108,10 +87,6 @@ async def hybrid_search(
             0.0,
         )
 
-        # Weighted hybrid ranking.
-        #
-        # Semantic meaning gets more weight.
-        # Exact keyword matching provides an additional signal.
         hybrid_score = (
             0.7 * vector_score
             + 0.3 * keyword_score
@@ -129,7 +104,6 @@ async def hybrid_search(
             }
         )
 
-    # Highest hybrid score first.
     ranked_results.sort(
         key=lambda item: item["hybrid_score"],
         reverse=True,
@@ -139,23 +113,19 @@ async def hybrid_search(
 
 
 async def answer_question(question: str) -> dict:
-    """
-    Complete RAG pipeline:
 
-    Question
-        ↓
-    Hybrid Retrieval
-        ↓
-    Context
-        ↓
-    Gemini
-        ↓
-    Answer + Sources
-    """
-
-    chunks = await hybrid_search(
+    # First stage: retrieve a larger candidate pool.
+    candidates = await hybrid_search(
         query=question,
-        limit=5,
+        limit=20,
+    )
+
+    # Second stage: use the cross-encoder to select
+    # the most relevant chunks.
+    chunks = rerank_documents(
+        query=question,
+        documents=candidates,
+        top_k=5,
     )
 
     context_parts = []
