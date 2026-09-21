@@ -73,3 +73,15 @@ class Source(BaseModel):
 class QueryResponse(BaseModel):
     answer: str
     sources: list[Source]
+    confidence: float = Field(
+        ge=0.0,
+        le=1.0,
+    )
+
+
+class RAGResponse(BaseModel):
+    answer: str
+    confidence: float = Field(
+        ge=0.0,
+        le=1.0,
+    )

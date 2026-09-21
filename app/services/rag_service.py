@@ -1,5 +1,5 @@
 import asyncio
-
+from app.schemas import RAGResponse
 from app.repositories.vector_repository import (
     search_keyword_chunks,
     search_similar_chunks,
@@ -140,22 +140,32 @@ async def answer_question(question: str) -> dict:
     context = "\n\n".join(context_parts)
 
     prompt = f"""
-Answer the user's question using only the provided context.
+    Answer the user's question using only the provided context.
 
-If the context does not contain enough information to answer the question,
-say that you don't have enough information.
+    If the context does not contain enough information,
+    say that you don't have enough information.
 
-Context:
-{context}
+    Return:
+    - answer: concise answer to the user
+    - confidence: a value between 0 and 1 representing
+    the model's confidence based on the provided context
 
-Question:
-{question}
-"""
+    Do not invent information.
 
-    answer = await llm_service.generate(prompt)
+    Context:
+    {context}
+
+    Question:
+    {question}
+    """
+
+    structured_response = await llm_service.generate_structured(
+        prompt=prompt,
+        response_model=RAGResponse,
+    )   
 
     return {
-        "answer": answer,
+        "answer": structured_response.answer,
         "sources": [
             {
                 "document_id": chunk["document_id"],
@@ -163,4 +173,5 @@ Question:
             }
             for chunk in chunks
         ],
+        "confidence": structured_response.confidence,
     }
