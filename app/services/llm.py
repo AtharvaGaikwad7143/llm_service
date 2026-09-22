@@ -71,16 +71,16 @@ class LLMService:
             self.client.aio.models.generate_content(
                 model=self.model_name,
                 contents=f"""
-Extract structured information from the following text.
+                Extract structured information from the following text.
 
-Return:
-- title: a short title
-- summary: a concise summary
-- keywords: important keywords from the text
+                Return:
+                - title: a short title
+                - summary: a concise summary
+                - keywords: important keywords from the text
 
-Text:
-{text}
-""",
+                Text:
+                {text}
+                """,
                 config=types.GenerateContentConfig(
                     response_mime_type="application/json",
                     response_schema=ExtractResponse,
@@ -159,6 +159,35 @@ Text:
         raise RuntimeError(
             "Structured generation failed unexpectedly."
         )
+
+
+    async def generate_stream(self, prompt: str):
+        max_attempts = 3
+
+        for attempt in range(1, max_attempts + 1):
+            try:
+                response = await self.client.aio.models.generate_content_stream(
+                    model=self.model_name,
+                    contents=prompt,
+                )
+
+                async for chunk in response:
+                    if chunk.text:
+                        yield chunk.text
+
+                return
+
+            except Exception as exc:
+                logger.warning(
+                    "Gemini streaming request failed. attempt=%s error=%s",
+                    attempt,
+                    exc,
+                )
+
+                if attempt == max_attempts:
+                    raise
+
+                await asyncio.sleep(2 ** (attempt - 1))
 
 
 llm_service = LLMService()

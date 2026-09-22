@@ -175,3 +175,45 @@ async def answer_question(question: str) -> dict:
         ],
         "confidence": structured_response.confidence,
     }
+
+
+async def stream_answer(question: str):
+    candidates = await hybrid_search(
+        query=question,
+        limit=20,
+    )
+
+    chunks = rerank_documents(
+        query=question,
+        documents=candidates,
+        top_k=5,
+    )
+
+    context_parts = []
+
+    for chunk in chunks:
+        context_parts.append(
+            f"[Document {chunk['document_id']}, "
+            f"Page {chunk['metadata'].get('page_number', 'unknown')}]\n"
+            f"{chunk['chunk_text']}"
+        )
+
+    context = "\n\n".join(context_parts)
+
+    prompt = f"""
+Answer the user's question using only the provided context.
+
+If the context does not contain enough information,
+say that you don't have enough information.
+
+Return only the answer text.
+
+Context:
+{context}
+
+Question:
+{question}
+"""
+
+    async for text_chunk in llm_service.generate_stream(prompt):
+        yield text_chunk
