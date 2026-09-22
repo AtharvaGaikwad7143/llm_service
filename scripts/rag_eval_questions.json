@@ -1,82 +1,102 @@
 [
   {
     "question": "What is Redis commonly used for?",
-    "expected_document_id": 1
+    "expected_document_id": 1,
+    "reference_answer": "Redis is commonly used for caching and fast key-value operations."
   },
   {
     "question": "What type of data store is Redis?",
-    "expected_document_id": 1
+    "expected_document_id": 1,
+    "reference_answer": "Redis is an in-memory data store."
   },
   {
     "question": "What operations is Redis known for?",
-    "expected_document_id": 1
+    "expected_document_id": 1,
+    "reference_answer": "Redis is commonly used for fast key-value operations."
   },
   {
     "question": "What is PostgreSQL?",
-    "expected_document_id": 2
+    "expected_document_id": 2,
+    "reference_answer": "PostgreSQL is a relational database management system."
   },
   {
     "question": "How does PostgreSQL store structured data?",
-    "expected_document_id": 2
+    "expected_document_id": 2,
+    "reference_answer": "PostgreSQL stores structured data using tables and SQL."
   },
   {
-    "question": "What language is commonly used with PostgreSQL?",
-    "expected_document_id": 2
+    "question": "What does PostgreSQL use to store structured data?",
+    "expected_document_id": 2,
+    "reference_answer": "PostgreSQL uses tables and SQL to store structured data."
   },
   {
     "question": "What is Python?",
-    "expected_document_id": 3
+    "expected_document_id": 3,
+    "reference_answer": "Python is a high-level programming language."
   },
   {
     "question": "What is Python commonly used for?",
-    "expected_document_id": 3
+    "expected_document_id": 3,
+    "reference_answer": "Python is commonly used for backend development, automation, and data science."
   },
   {
     "question": "Is Python useful for backend development?",
-    "expected_document_id": 3
+    "expected_document_id": 3,
+    "reference_answer": "Yes, Python is commonly used for backend development."
   },
   {
     "question": "What does Docker package?",
-    "expected_document_id": 4
+    "expected_document_id": 4,
+    "reference_answer": "Docker packages applications and their dependencies into containers."
   },
   {
     "question": "Why are Docker containers useful across environments?",
-    "expected_document_id": 4
+    "expected_document_id": 4,
+    "reference_answer": "Docker containers allow applications and their dependencies to run consistently across environments."
   },
   {
     "question": "What does Docker do with application dependencies?",
-    "expected_document_id": 4
+    "expected_document_id": 4,
+    "reference_answer": "Docker packages application dependencies together with applications in containers."
   },
   {
     "question": "What is the capital city of France?",
-    "expected_document_id": 5
+    "expected_document_id": 5,
+    "reference_answer": "Paris is the capital city of France."
   },
   {
     "question": "What famous landmark is Paris known for?",
-    "expected_document_id": 5
+    "expected_document_id": 5,
+    "reference_answer": "Paris is famous for landmarks such as the Eiffel Tower."
   },
   {
     "question": "Which country is Paris the capital of?",
-    "expected_document_id": 5
+    "expected_document_id": 5,
+    "reference_answer": "Paris is the capital of France."
   },
   {
     "question": "What is the Eiffel Tower associated with?",
-    "expected_document_id": 5
+    "expected_document_id": 5,
+    "reference_answer": "The Eiffel Tower is a famous landmark in Paris."
   },
   {
     "question": "What is an in-memory data store?",
-    "expected_document_id": 1
+    "expected_document_id": 1,
+    "reference_answer": "An in-memory data store keeps data in memory and can provide fast access to key-value operations."
   },
   {
     "question": "What technology packages applications into containers?",
-    "expected_document_id": 4
+    "expected_document_id": 4,
+    "reference_answer": "Docker packages applications and their dependencies into containers."
   },
   {
     "question": "Which programming language is used for backend development and data science?",
-    "expected_document_id": 3
+    "expected_document_id": 3,
+    "reference_answer": "Python is commonly used for backend development and data science."
   },
   {
     "question": "Which database system uses tables and SQL to store structured data?",
-    "expected_document_id": 2
+    "expected_document_id": 2,
+    "reference_answer": "PostgreSQL uses tables and SQL to store structured data."
   }
 ]

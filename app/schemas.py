@@ -85,3 +85,10 @@ class RAGResponse(BaseModel):
         ge=0.0,
         le=1.0,
     )
+
+
+class RAGEvaluation(BaseModel):
+    relevance: float = Field(ge=0.0, le=1.0)
+    faithfulness: float = Field(ge=0.0, le=1.0)
+    correctness: float = Field(ge=0.0, le=1.0)
+    reason: str

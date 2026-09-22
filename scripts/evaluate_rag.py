@@ -1,4 +1,3 @@
-
 import asyncio
 import json
 
@@ -14,6 +13,7 @@ async def evaluate_rag():
         questions = json.load(file)
 
     correct = 0
+    reciprocal_rank_sum = 0.0
 
     for index, item in enumerate(questions, start=1):
         question = item["question"]
@@ -30,12 +30,23 @@ async def evaluate_rag():
             for result in results
         ]
 
+        # Recall@5:
+        # Did the expected document appear anywhere in top 5?
         is_correct = (
             expected_document_id in retrieved_document_ids
         )
 
         if is_correct:
             correct += 1
+
+        # MRR@5:
+        # Find the rank of the first relevant result.
+        if expected_document_id in retrieved_document_ids:
+            rank = retrieved_document_ids.index(
+                expected_document_id
+            ) + 1
+
+            reciprocal_rank_sum += 1 / rank
 
         status = "PASS" if is_correct else "FAIL"
 
@@ -47,13 +58,14 @@ async def evaluate_rag():
         )
 
     recall_at_5 = correct / len(questions)
+    mrr_at_5 = reciprocal_rank_sum / len(questions)
 
     print("\n----------------------------")
     print(f"Correct: {correct}/{len(questions)}")
     print(f"Recall@5: {recall_at_5:.2%}")
+    print(f"MRR@5:    {mrr_at_5:.4f}")
     print("----------------------------")
 
 
 if __name__ == "__main__":
     asyncio.run(evaluate_rag())
-
