@@ -6,13 +6,14 @@ from app.schemas import SearchRequest, SearchResponse
 from app.repositories.vector_repository import search_similar_chunks
 from app.services.embeddings import embed_text
 from app.repositories.document_repository import get_document
-#from fastapi import Path
+
 
 router = APIRouter(
     prefix="/documents",
     tags=["documents"],
 )
 
+MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
 
 @router.post("")
 async def upload_document(
@@ -36,11 +37,27 @@ async def upload_document(
         suffix=".pdf",
         delete=False,
     ) as temp_file:
-        temp_file.write(await file.read())
+        total_size = 0
+
+        while True:
+            chunk = await file.read(1024 * 1024)
+
+            if not chunk:
+                break
+
+            total_size += len(chunk)
+
+            if total_size > MAX_FILE_SIZE:
+                raise HTTPException(
+                    status_code=413,
+                    detail="PDF file is too large. Maximum size is 10 MB.",
+                )
+
+            temp_file.write(chunk)
+
         temp_path = Path(temp_file.name)
 
     try:
-        # Run the complete ingestion pipeline.
         result = await ingest_document(
             pdf_path=str(temp_path),
             filename=file.filename or "unknown.pdf",
@@ -48,8 +65,13 @@ async def upload_document(
 
         return result
 
+    except Exception:
+        raise HTTPException(
+            status_code=400,
+            detail="Unable to process the uploaded PDF.",
+        )
+
     finally:
-        # Always delete the temporary PDF after processing.
         temp_path.unlink(missing_ok=True)
 
 
