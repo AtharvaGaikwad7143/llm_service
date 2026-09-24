@@ -50,9 +50,24 @@ jobs:
           set -e
 
           cd ~/llm_service
+
           git pull origin main
+
           docker compose up -d --build
 
-          sleep 10
+          echo "Waiting for API to become ready..."
 
-          curl -f http://localhost:8000/health
+          for i in {1..30}; do
+            if curl -fsS http://localhost:8000/health; then
+              echo "API is healthy."
+              exit 0
+            fi
+
+            echo "Attempt $i/30: API not ready yet..."
+            sleep 5
+          done
+
+          echo "API failed to become healthy."
+          docker compose ps -a
+          docker compose logs --tail=200 api
+          exit 1
