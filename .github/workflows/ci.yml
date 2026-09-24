@@ -39,27 +39,20 @@ jobs:
 
   deploy:
     name: Deploy to EC2
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     needs: test
 
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
     steps:
       - name: Deploy to EC2
-        uses: appleboy/ssh-action@v1.2.2
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          script: |
-            set -e
+        run: |
+          set -e
 
-            cd ~/llm_service
+          cd ~/llm_service
+          git pull origin main
+          docker compose up -d --build
 
-            git pull origin main
+          sleep 10
 
-            docker compose up -d --build
-
-            sleep 10
-
-            curl -f http://localhost:8000/health
+          curl -f http://localhost:8000/health
