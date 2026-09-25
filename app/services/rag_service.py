@@ -35,9 +35,14 @@ async def hybrid_search(
     limit: int = 20,
 ) -> list[dict]:
 
-    query_embedding = embed_text(query)
+    # Run synchronous embedding inference
+    # outside the event-loop thread.
+    query_embedding = await asyncio.to_thread(
+        embed_text,
+        query,
+    )
 
-    # Run vector and keyword retrieval concurrently.
+    # Run independent DB operations concurrently.
     vector_results, keyword_results = await asyncio.gather(
         search_similar_chunks(
             query_embedding=query_embedding,
@@ -67,7 +72,6 @@ async def hybrid_search(
         keyword_scores
     )
 
-    # Merge candidates from both retrieval systems.
     all_results = {}
 
     for result in vector_results + keyword_results:
@@ -112,17 +116,16 @@ async def hybrid_search(
     return ranked_results[:limit]
 
 
+
 async def answer_question(question: str) -> dict:
 
-    # First stage: retrieve a larger candidate pool.
     candidates = await hybrid_search(
         query=question,
         limit=20,
     )
 
-    # Second stage: use the cross-encoder to select
-    # the most relevant chunks.
-    chunks = rerank_documents(
+    chunks = await asyncio.to_thread(
+        rerank_documents,
         query=question,
         documents=candidates,
         top_k=5,
@@ -162,7 +165,7 @@ async def answer_question(question: str) -> dict:
     structured_response = await llm_service.generate_structured(
         prompt=prompt,
         response_model=RAGResponse,
-    )   
+    )
 
     return {
         "answer": structured_response.answer,
@@ -183,7 +186,8 @@ async def stream_answer(question: str):
         limit=20,
     )
 
-    chunks = rerank_documents(
+    chunks = await asyncio.to_thread(
+        rerank_documents,
         query=question,
         documents=candidates,
         top_k=5,
