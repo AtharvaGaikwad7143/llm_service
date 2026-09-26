@@ -1,7 +1,8 @@
 from pathlib import Path
-from tempfile import NamedTemporaryFile
+from uuid import uuid4
+from fastapi import APIRouter, File, HTTPException, UploadFile, status
+from app.tasks import process_document
 from fastapi import APIRouter, File, HTTPException, UploadFile
-from app.services.document_service import ingest_document
 from app.schemas import SearchRequest, SearchResponse
 from app.repositories.vector_repository import search_similar_chunks
 from app.services.embeddings import embed_text
@@ -13,66 +14,70 @@ router = APIRouter(
     tags=["documents"],
 )
 
-MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
 
-@router.post("")
-async def upload_document(
-    file: UploadFile = File(...),
-):
-    """
-    Accept a PDF upload and send it through
-    the document ingestion pipeline.
-    """
+UPLOAD_DIR = Path("/app/uploads")
+MAX_FILE_SIZE = 10 * 1024 * 1024
 
-    # We currently support PDF documents only.
+
+@router.post("", status_code=status.HTTP_202_ACCEPTED)
+async def upload_document(file: UploadFile = File(...)):
     if file.content_type != "application/pdf":
         raise HTTPException(
             status_code=400,
             detail="Only PDF files are supported.",
         )
 
-    # Save the uploaded file temporarily.
-    # The ingestion service expects a file path.
-    with NamedTemporaryFile(
-        suffix=".pdf",
-        delete=False,
-    ) as temp_file:
-        total_size = 0
+    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
-        while True:
-            chunk = await file.read(1024 * 1024)
+    stored_filename = f"{uuid4()}.pdf"
+    pdf_path = UPLOAD_DIR / stored_filename
 
-            if not chunk:
-                break
-
-            total_size += len(chunk)
-
-            if total_size > MAX_FILE_SIZE:
-                raise HTTPException(
-                    status_code=413,
-                    detail="PDF file is too large. Maximum size is 10 MB.",
-                )
-
-            temp_file.write(chunk)
-
-        temp_path = Path(temp_file.name)
+    total_size = 0
 
     try:
-        result = await ingest_document(
-            pdf_path=str(temp_path),
-            filename=file.filename or "unknown.pdf",
+        with pdf_path.open("wb") as output_file:
+            while True:
+                chunk = await file.read(1024 * 1024)
+
+                if not chunk:
+                    break
+
+                total_size += len(chunk)
+
+                if total_size > MAX_FILE_SIZE:
+                    pdf_path.unlink(missing_ok=True)
+
+                    raise HTTPException(
+                        status_code=413,
+                        detail="PDF file is too large. Maximum size is 10 MB.",
+                    )
+
+                output_file.write(chunk)
+
+        task = process_document.delay(
+            str(pdf_path),
+            file.filename or "unknown.pdf",
         )
 
-        return result
+        return {
+            "task_id": task.id,
+            "filename": file.filename or "unknown.pdf",
+            "status": "queued",
+        }
+
+    except HTTPException:
+        raise
 
     except Exception:
+        pdf_path.unlink(missing_ok=True)
+
         raise HTTPException(
-            status_code=400,
-            detail="Unable to process the uploaded PDF.",
+            status_code=500,
+            detail="Unable to queue document for processing.",
         )
 
     finally:
-        temp_path.unlink(missing_ok=True)
+        await file.close()
 
 
 @router.post(
