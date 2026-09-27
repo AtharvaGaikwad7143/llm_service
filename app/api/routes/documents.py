@@ -1,12 +1,14 @@
 from pathlib import Path
-from uuid import uuid4
+from uuid import UUID, uuid4
+
 from fastapi import APIRouter, File, HTTPException, UploadFile, status
-from app.tasks import process_document
-from fastapi import APIRouter, File, HTTPException, UploadFile
-from app.schemas import SearchRequest, SearchResponse
-from app.repositories.vector_repository import search_similar_chunks
-from app.services.embeddings import embed_text
+
 from app.repositories.document_repository import get_document
+from app.repositories.job_repository import create_job
+from app.repositories.vector_repository import search_similar_chunks
+from app.schemas import SearchRequest, SearchResponse
+from app.services.embeddings import embed_text
+from app.tasks import process_document
 
 
 router = APIRouter(
@@ -54,15 +56,22 @@ async def upload_document(file: UploadFile = File(...)):
 
                 output_file.write(chunk)
 
+        job_id = uuid4()
+
+        # Create application-level job state first.
+        await create_job(job_id)
+
         task = process_document.delay(
             str(pdf_path),
             file.filename or "unknown.pdf",
+            str(job_id),
         )
 
         return {
+            "job_id": str(job_id),
             "task_id": task.id,
             "filename": file.filename or "unknown.pdf",
-            "status": "queued",
+            "status": "PENDING",
         }
 
     except HTTPException:
@@ -92,18 +101,13 @@ async def search_documents(
     stored document chunks.
     """
 
-    # Convert the natural-language query into
-    # the same 384-dimensional vector space used
-    # when storing document chunk embeddings.
     query_embedding = embed_text(request.query)
 
-    # Search pgvector for the nearest chunk vectors.
     results = await search_similar_chunks(
         query_embedding=query_embedding,
         limit=request.limit,
     )
 
-    # Convert database rows into the public API format.
     formatted_results = [
         {
             "chunk_id": result["id"],
@@ -131,7 +135,6 @@ async def get_document_by_id(
 
     document = await get_document(document_id)
 
-    # The requested document doesn't exist.
     if document is None:
         raise HTTPException(
             status_code=404,
