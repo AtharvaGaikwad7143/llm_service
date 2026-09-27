@@ -15,6 +15,7 @@ async def _process_document(
     pdf_path: str,
     filename: str,
     job_id: str,
+    content_hash: str,
 ) -> dict:
     job_uuid = UUID(job_id)
 
@@ -24,6 +25,7 @@ async def _process_document(
         result = await ingest_document(
             pdf_path=pdf_path,
             filename=filename,
+            content_hash=content_hash,
         )
 
         document_id = result["document_id"]
@@ -50,7 +52,7 @@ async def _process_document(
 
         try:
             await mark_job_failed(job_uuid)
-            
+
         except Exception as state_error:
             print(
                 f"Failed to update job state: "
@@ -65,6 +67,7 @@ def process_document(
     pdf_path: str,
     filename: str,
     job_id: str,
+    content_hash: str,
 ) -> dict:
     print(f"Processing document: {filename}")
 
@@ -73,5 +76,6 @@ def process_document(
             pdf_path=pdf_path,
             filename=filename,
             job_id=job_id,
+            content_hash=content_hash,
         )
     )

@@ -8,6 +8,7 @@ from app.services.embeddings import embed_text
 async def ingest_document(
     pdf_path: str,
     filename: str,
+    content_hash: str,
 ) -> dict:
     """
     Complete document ingestion pipeline.
@@ -18,6 +19,8 @@ async def ingest_document(
       ↓
     token-aware chunking
       ↓
+    document creation / duplicate detection
+      ↓
     embeddings
       ↓
     PostgreSQL + pgvector
@@ -26,17 +29,29 @@ async def ingest_document(
     # Extract the PDF while preserving page numbers.
     pages = extract_pages_from_pdf(pdf_path)
 
-    # Store the original document first.
-    # The generated ID will be used by all chunks.
+    # Build the complete document text.
     full_text = "\n\n".join(
         page["text"]
         for page in pages
     )
 
-    document_id = await create_document(
+    # Create a new document or return the existing
+    # document when the same PDF was already processed.
+    document_id, created = await create_document(
         filename=filename,
         content=full_text,
+        content_hash=content_hash,
     )
+
+    # If this exact PDF already exists, do not create
+    # another set of chunks.
+    if not created:
+        return {
+            "document_id": document_id,
+            "filename": filename,
+            "chunks_created": 0,
+            "duplicate": True,
+        }
 
     # Split pages into overlapping chunks.
     chunks = chunk_pages(
@@ -65,4 +80,5 @@ async def ingest_document(
         "document_id": document_id,
         "filename": filename,
         "chunks_created": len(chunks),
+        "duplicate": False,
     }

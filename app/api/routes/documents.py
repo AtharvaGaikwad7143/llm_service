@@ -1,6 +1,6 @@
 from pathlib import Path
 from uuid import UUID, uuid4
-
+import hashlib
 from fastapi import APIRouter, File, HTTPException, UploadFile, status
 
 from app.repositories.document_repository import get_document
@@ -35,6 +35,7 @@ async def upload_document(file: UploadFile = File(...)):
     pdf_path = UPLOAD_DIR / stored_filename
 
     total_size = 0
+    hasher = hashlib.sha256()
 
     try:
         with pdf_path.open("wb") as output_file:
@@ -54,7 +55,10 @@ async def upload_document(file: UploadFile = File(...)):
                         detail="PDF file is too large. Maximum size is 10 MB.",
                     )
 
+                hasher.update(chunk)
                 output_file.write(chunk)
+
+        content_hash = hasher.hexdigest()
 
         job_id = uuid4()
 
@@ -65,6 +69,7 @@ async def upload_document(file: UploadFile = File(...)):
             str(pdf_path),
             file.filename or "unknown.pdf",
             str(job_id),
+            content_hash,
         )
 
         return {
