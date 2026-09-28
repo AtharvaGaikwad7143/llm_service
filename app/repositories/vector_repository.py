@@ -1,53 +1,53 @@
 import json
-
 from sqlalchemy import text
-
 from app.db.database import AsyncSessionLocal
 
 
 async def insert_chunk(
     document_id: int,
     chunk_text: str,
-    embedding: list[float],
+    embedding,
     metadata: dict,
-) -> int:
-    """
-    Store one document chunk and its embedding in PostgreSQL.
-    """
+) -> None:
+    chunk_index = metadata["chunk_index"]
+
+    embedding_string = "[" + ",".join(
+        str(value)
+        for value in embedding
+    ) + "]"
 
     async with AsyncSessionLocal() as session:
-
-        query = text(
-            """
+        query = text("""
             INSERT INTO document_chunks (
                 document_id,
                 chunk_text,
                 embedding,
-                metadata
+                metadata,
+                chunk_index
             )
             VALUES (
                 :document_id,
                 :chunk_text,
                 CAST(:embedding AS vector),
-                CAST(:metadata AS jsonb)
+                CAST(:metadata AS JSONB),
+                :chunk_index
             )
-            RETURNING id
-            """
-        )
+            ON CONFLICT (document_id, chunk_index)
+            DO NOTHING
+        """)
 
-        result = await session.execute(
+        await session.execute(
             query,
             {
                 "document_id": document_id,
                 "chunk_text": chunk_text,
-                "embedding": str(embedding),
+                "embedding": embedding_string,
                 "metadata": json.dumps(metadata),
+                "chunk_index": chunk_index,
             },
         )
 
         await session.commit()
-
-        return result.scalar_one()
 
 
 

@@ -26,46 +26,30 @@ async def ingest_document(
     PostgreSQL + pgvector
     """
 
-    # Extract the PDF while preserving page numbers.
     pages = extract_pages_from_pdf(pdf_path)
 
-    # Build the complete document text.
     full_text = "\n\n".join(
         page["text"]
         for page in pages
     )
 
-    # Create a new document or return the existing
-    # document when the same PDF was already processed.
     document_id, created = await create_document(
         filename=filename,
         content=full_text,
         content_hash=content_hash,
     )
 
-    # If this exact PDF already exists, do not create
-    # another set of chunks.
-    if not created:
-        return {
-            "document_id": document_id,
-            "filename": filename,
-            "chunks_created": 0,
-            "duplicate": True,
-        }
-
-    # Split pages into overlapping chunks.
     chunks = chunk_pages(
         pages,
         chunk_size=500,
         overlap=50,
     )
 
-    # Process every chunk independently.
+    chunks_created = 0
+
     for chunk in chunks:
-        # Convert chunk text into a 384-dimensional embedding.
         embedding = embed_text(chunk["text"])
 
-        # Store the vector together with useful source metadata.
         await insert_chunk(
             document_id=document_id,
             chunk_text=chunk["text"],
@@ -76,9 +60,11 @@ async def ingest_document(
             },
         )
 
+        chunks_created += 1
+
     return {
         "document_id": document_id,
         "filename": filename,
-        "chunks_created": len(chunks),
-        "duplicate": False,
+        "chunks_created": chunks_created,
+        "duplicate": not created,
     }
