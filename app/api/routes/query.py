@@ -7,24 +7,54 @@ from fastapi.responses import StreamingResponse
 from app.schemas import QueryRequest, QueryResponse
 from app.services.rag_service import answer_question, stream_answer
 
+from app.config import settings
+from app.services.cache import (
+    get_cached_response,
+    set_cached_response,
+)
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/query", tags=["query"])
 
 
+# @router.post("", response_model=QueryResponse)
+# async def query_documents(request: QueryRequest):
+#     """
+#     Run the complete RAG pipeline and return a structured response.
+
+#     Flow:
+#     question → retrieval → reranking → context → LLM
+#     → answer + sources + confidence
+#     """
+#     result = await answer_question(request.question)
+
+#     return QueryResponse(**result)
+
+
 @router.post("", response_model=QueryResponse)
 async def query_documents(request: QueryRequest):
-    """
-    Run the complete RAG pipeline and return a structured response.
+    cached_response = await get_cached_response(request.question)
 
-    Flow:
-    question → retrieval → reranking → context → LLM
-    → answer + sources + confidence
-    """
+    if cached_response is not None:
+        logger.info("RAG cache HIT")
+        return cached_response
+    logger.info("RAG cache MISS")
+
     result = await answer_question(request.question)
 
-    return QueryResponse(**result)
+    response = {
+        "question": request.question,
+        **result,
+    }
+
+    await set_cached_response(
+        request.question,
+        response,
+        settings.rag_cache_ttl,
+    )
+
+    return response
 
 
 @router.post("/stream")

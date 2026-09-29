@@ -8,6 +8,7 @@ services:
       - .env
     environment:
       DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/llm_service
+      REDIS_URL: redis://redis:6379/0
     volumes:
       - uploads:/app/uploads
     depends_on:
@@ -41,6 +42,7 @@ services:
     environment:
       DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/llm_service
       CELERY_BROKER_URL: redis://redis:6379/0
+      REDIS_URL: redis://redis:6379/0
     volumes:
       - uploads:/app/uploads
     depends_on:
