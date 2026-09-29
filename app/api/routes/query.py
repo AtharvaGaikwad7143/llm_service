@@ -13,6 +13,9 @@ from app.services.cache import (
     set_cached_response,
 )
 
+from fastapi import Depends
+from app.services.rate_limiter import rate_limiter
+
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/query", tags=["query"])
@@ -32,7 +35,7 @@ router = APIRouter(prefix="/query", tags=["query"])
 #     return QueryResponse(**result)
 
 
-@router.post("", response_model=QueryResponse)
+@router.post("", dependencies=[Depends(rate_limiter)],)
 async def query_documents(request: QueryRequest):
     cached_response = await get_cached_response(request.question)
 
@@ -57,7 +60,7 @@ async def query_documents(request: QueryRequest):
     return response
 
 
-@router.post("/stream")
+@router.post("/stream", dependencies=[Depends(rate_limiter)],)
 async def stream_query(request: QueryRequest):
     """
     Stream the RAG answer using Server-Sent Events (SSE).

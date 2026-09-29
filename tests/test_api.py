@@ -2,11 +2,17 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
+from app.services.rate_limiter import rate_limiter
 
 
 @pytest.fixture
 def client():
-    return TestClient(app)
+    app.dependency_overrides[rate_limiter] = lambda: None
+
+    with TestClient(app) as test_client:
+        yield test_client
+
+    app.dependency_overrides.clear()
 
 
 def test_health(client):
